@@ -1,19 +1,1587 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Genesis | Academic Timetable Planner</title>
-    <!-- Load Fonts according to DESIGN.md -->
-    <link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap" rel="stylesheet">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <meta name="description" content="Genesis Precision Scheduler - A beautiful interface to plan your university academic semester using raw excel data exports." />
-    <script type="module" crossorigin src="./assets/index-DnTAdBvI.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-DAbcXJxe.css">
-  </head>
-  <body>
-    <div id="root"></div>
-  </body>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>TKB - Thời Khóa Biểu</title>
+<style>
+  :root{
+    --bg:#0a0e1a;
+    --bg-panel:#121828;
+    --bg-card:#0d1420;
+    --border:#232b3d;
+    --border-soft:#1a2233;
+    --text:#e8ecf5;
+    --text-dim:#8b93a7;
+    --text-faint:#5a6378;
+    --accent-blue:#4f9cf9;
+    --lt:#2dd4a7;      /* Lý thuyết - green/teal */
+    --lt-bg:#132a26;
+    --bt:#f5a623;      /* Bài tập - orange */
+    --bt-bg:#2a2013;
+    --th:#38bdf8;      /* Thực hành - cyan/blue */
+    --th-bg:#122733;
+    --warn:#ef4444;
+    --warn-bg:#2a1414;
+    --radius:10px;
+    --radius-lg:14px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{ background:var(--accent-blue); color:#fff; }
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 24px;
+    border-bottom:1px solid var(--border-soft);
+    gap:16px; flex-wrap:wrap;
+  }
+  .topbar-left{ display:flex; align-items:center; gap:14px; }
+  .badge-school{
+    display:inline-flex; align-items:center;
+    padding:6px 12px;
+    border:1px solid var(--border);
+    border-radius:8px;
+    font-size:12px; font-weight:600;
+    letter-spacing:.02em;
+    color:var(--text-dim);
+    background:var(--bg-panel);
+  }
+  .topbar-right{ display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
+  .legend{ display:flex; align-items:center; gap:16px; font-size:13px; color:var(--text-dim); flex-wrap:wrap;}
+  .legend-item{ display:flex; align-items:center; gap:6px; }
+  .dot{ width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+  .dot.lt{ background:var(--lt); }
+  .dot.bt{ background:var(--bt); }
+  .dot.th{ background:var(--th); }
+  .credit-total{ font-size:13px; color:var(--text-dim); }
+  .credit-total b{ color:var(--text); }
+
+  .account-area{ display:flex; align-items:center; gap:10px; }
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:9px 14px;
+    border-radius:8px;
+    border:1px solid var(--border);
+    background:var(--bg-panel);
+    color:var(--text);
+    font-size:13px; font-weight:600;
+    cursor:pointer;
+    transition: border-color .15s ease, background .15s ease, transform .1s ease;
+    white-space:nowrap;
+  }
+  .btn:hover{ border-color:var(--accent-blue); background:#141c30; }
+  .btn:active{ transform:scale(.97); }
+  .btn-primary{ background:var(--accent-blue); border-color:var(--accent-blue); color:#06101f; }
+  .btn-primary:hover{ background:#69add9; border-color:#69add9; }
+  .btn-ghost{ background:transparent; }
+  .btn-danger{ color:var(--warn); }
+  .btn-sm{ padding:6px 10px; font-size:12px; }
+  .avatar{
+    width:32px; height:32px; border-radius:50%;
+    background:linear-gradient(135deg, var(--accent-blue), #7c5cff);
+    display:flex; align-items:center; justify-content:center;
+    font-size:13px; font-weight:700; color:#06101f;
+    flex-shrink:0; overflow:hidden;
+  }
+  .avatar img{ width:100%; height:100%; object-fit:cover; }
+
+  /* ---------- Header / title block ---------- */
+  .header-block{
+    padding:24px 24px 4px;
+  }
+  .header-title-row{
+    display:flex; align-items:baseline; justify-content:space-between;
+    flex-wrap:wrap; gap:10px;
+    margin-bottom:6px;
+  }
+  h1{ font-size:26px; font-weight:800; letter-spacing:-.01em; }
+  .subtitle{ color:var(--text-dim); font-size:13px; }
+  .class-picker-hint{
+    font-size:13px; color:var(--text-dim);
+    display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  }
+  select.class-select{
+    background:var(--bg-panel); color:var(--text);
+    border:1px solid var(--border); border-radius:8px;
+    padding:8px 10px; font-size:13px; font-weight:600;
+    cursor:pointer;
+  }
+
+  /* ---------- Grid ---------- */
+  .grid-wrap{ padding:12px 24px 24px; overflow-x:auto; }
+  .tkb-grid{
+    display:grid;
+    grid-template-columns: 130px repeat(6, minmax(160px, 1fr));
+    border:1px solid var(--border-soft);
+    border-radius:var(--radius-lg);
+    overflow:hidden;
+    min-width:1180px;
+    background:var(--bg-panel);
+  }
+  .grid-head{
+    padding:14px 12px;
+    background:#0e1424;
+    border-bottom:1px solid var(--border-soft);
+    border-right:1px solid var(--border-soft);
+    font-size:13px; font-weight:700; color:var(--accent-blue);
+    display:flex; align-items:center; justify-content:center;
+    text-align:center;
+  }
+  .grid-head:last-child{ border-right:none; }
+  .grid-head.corner{ color:var(--text-dim); font-weight:600; }
+
+  .ca-label{
+    padding:16px 12px;
+    border-right:1px solid var(--border-soft);
+    border-bottom:1px solid var(--border-soft);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; gap:2px;
+    background:#0d1220;
+  }
+  .ca-label .ca-name{ font-size:14px; font-weight:700; }
+  .ca-label .ca-tiet{ font-size:12px; color:var(--accent-blue); font-weight:600; margin-top:2px; }
+  .ca-label .ca-time{ font-size:11px; color:var(--text-faint); }
+
+  .cell{
+    border-right:1px solid var(--border-soft);
+    border-bottom:1px solid var(--border-soft);
+    padding:8px;
+    min-height:100px;
+    display:flex; flex-direction:column; gap:8px;
+    position:relative;
+  }
+  .cell:last-child{ border-right:none; }
+
+  .subject-card{
+    border-radius:var(--radius);
+    border:1px solid var(--border);
+    padding:10px 12px;
+    cursor:pointer;
+    transition:border-color .15s ease, transform .1s ease;
+    position:relative;
+  }
+  .subject-card:hover{ transform:translateY(-1px); }
+  .subject-card:active{ transform:translateY(0); }
+
+  .subject-card.type-lt{ background:var(--lt-bg); border-color:#1f4a41; }
+  .subject-card.type-lt:hover{ border-color:var(--lt); }
+  .subject-card.type-bt{ background:var(--bt-bg); border-color:#4a3a1a; }
+  .subject-card.type-bt:hover{ border-color:var(--bt); }
+  .subject-card.type-th{ background:var(--th-bg); border-color:#1a3f52; }
+  .subject-card.type-th:hover{ border-color:var(--th); }
+  .subject-card.type-onl{ background:#1a1330; border-color:#3a2a5a; }
+  .subject-card.type-onl:hover{ border-color:#a78bfa; }
+
+  .type-tag-row{ display:flex; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap; }
+  .type-tag{
+    font-size:10px; font-weight:800; letter-spacing:.04em;
+    padding:2px 7px; border-radius:5px;
+  }
+  .type-tag.lt{ background:rgba(45,212,167,.15); color:var(--lt); }
+  .type-tag.bt{ background:rgba(245,166,35,.15); color:var(--bt); }
+  .type-tag.th{ background:rgba(56,189,248,.15); color:var(--th); }
+  .type-tag.onl{ background:rgba(167,139,250,.15); color:#a78bfa; }
+  .warn-tag{
+    font-size:10px; font-weight:700;
+    padding:2px 7px; border-radius:5px;
+    background:rgba(239,68,68,.15); color:var(--warn);
+    display:inline-flex; align-items:center; gap:3px;
+  }
+
+  .subject-name{ font-size:13px; font-weight:700; line-height:1.35; margin-bottom:6px; }
+  .subject-meta{ font-size:11.5px; color:var(--text-dim); line-height:1.5; }
+  .subject-meta .room{ color:var(--text); font-weight:600; }
+  .subject-meta .pin{ margin-right:3px; }
+
+  .empty-cell-hint{
+    flex:1; display:flex; align-items:center; justify-content:center;
+    color:var(--border); font-size:20px; opacity:.5;
+    transition:opacity .15s ease, color .15s ease;
+    cursor:pointer; border-radius:var(--radius);
+    min-height:60px;
+  }
+  .empty-cell-hint:hover{ opacity:1; color:var(--accent-blue); background:#0f1830; }
+
+  /* ---------- Footer ---------- */
+  .footer-row{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 24px 28px; flex-wrap:wrap; gap:8px;
+    color:var(--text-faint); font-size:12px;
+  }
+  .footer-note{ display:flex; align-items:center; gap:6px; color:var(--text-dim); }
+
+  /* ---------- Empty state ---------- */
+  .empty-state{
+    max-width:560px; margin:60px auto; text-align:center; padding:0 24px;
+  }
+  .empty-state h2{ font-size:20px; margin-bottom:10px; }
+  .empty-state p{ color:var(--text-dim); font-size:14px; line-height:1.6; margin-bottom:20px; }
+
+  /* ---------- Modal ---------- */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(4,6,12,.7);
+    display:none; align-items:center; justify-content:center;
+    z-index:100; padding:20px; backdrop-filter:blur(2px);
+  }
+  .modal-overlay.show{ display:flex; }
+  .modal{
+    background:var(--bg-panel); border:1px solid var(--border);
+    border-radius:var(--radius-lg); padding:24px;
+    max-width:480px; width:100%; max-height:86vh; overflow-y:auto;
+  }
+  .modal h3{ font-size:17px; margin-bottom:4px; }
+  .modal .modal-sub{ font-size:13px; color:var(--text-dim); margin-bottom:18px; }
+  .modal-close-row{ display:flex; justify-content:flex-end; margin-top:20px; gap:10px; }
+
+  .field{ margin-bottom:14px; }
+  .field label{ display:block; font-size:12px; font-weight:700; color:var(--text-dim); margin-bottom:6px; }
+  .field input[type=text], .field select, .field textarea{
+    width:100%; padding:10px 12px;
+    background:var(--bg-card); border:1px solid var(--border);
+    border-radius:8px; color:var(--text); font-size:13px;
+    font-family:inherit;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus{ outline:none; border-color:var(--accent-blue); }
+  .field-row{ display:flex; gap:10px; }
+  .field-row .field{ flex:1; }
+
+  .dropzone{
+    border:2px dashed var(--border);
+    border-radius:var(--radius);
+    padding:28px 16px; text-align:center;
+    cursor:pointer; transition:border-color .15s ease, background .15s ease;
+    color:var(--text-dim); font-size:13px;
+  }
+  .dropzone:hover, .dropzone.dragover{ border-color:var(--accent-blue); background:#101a2e; }
+  .dropzone .dz-icon{ font-size:28px; margin-bottom:8px; }
+
+  .class-list{ max-height:280px; overflow-y:auto; display:flex; flex-direction:column; gap:6px; margin-top:8px; }
+  .class-option{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 12px; border:1px solid var(--border); border-radius:8px;
+    cursor:pointer; font-size:13px; transition:border-color .15s ease, background .15s ease;
+  }
+  .class-option:hover{ border-color:var(--accent-blue); background:#101a2e; }
+  .class-option .cnt{ color:var(--text-faint); font-size:11px; }
+
+  .toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--bg-panel); border:1px solid var(--border); color:var(--text);
+    padding:12px 18px; border-radius:10px; font-size:13px; font-weight:600;
+    box-shadow:0 8px 24px rgba(0,0,0,.4);
+    opacity:0; pointer-events:none; transition:opacity .2s ease, transform .2s ease;
+    z-index:200; max-width:90vw;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+  .toast.error{ border-color:var(--warn); color:var(--warn); }
+  .toast.success{ border-color:var(--lt); color:var(--lt); }
+
+  .spinner{
+    width:16px; height:16px; border:2px solid rgba(255,255,255,.2);
+    border-top-color:var(--accent-blue); border-radius:50%;
+    animation:spin .7s linear infinite; display:inline-block;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  .subject-checklist{ max-height:320px; overflow-y:auto; display:flex; flex-direction:column; gap:6px; }
+  .subject-check-item{
+    display:flex; align-items:flex-start; gap:10px;
+    padding:10px 12px; border:1px solid var(--border); border-radius:8px;
+    cursor:pointer; font-size:12.5px; transition:border-color .15s ease;
+  }
+  .subject-check-item:hover{ border-color:var(--accent-blue); }
+  .subject-check-item input{ margin-top:3px; flex-shrink:0; }
+  .subject-check-item .sci-main{ font-weight:700; margin-bottom:2px; }
+  .subject-check-item .sci-meta{ color:var(--text-dim); font-size:11px; }
+
+  .conflict-badge{
+    font-size:10px; font-weight:700; color:var(--warn);
+    background:rgba(239,68,68,.12); padding:2px 6px; border-radius:5px;
+    margin-left:6px;
+  }
+
+  /* ---------- Mobile ---------- */
+  @media (max-width: 720px){
+    .topbar{ padding:12px 16px; }
+    .legend{ display:none; }
+    .header-block{ padding:18px 16px 4px; }
+    h1{ font-size:20px; }
+    .grid-wrap{ padding:10px 16px 20px; }
+    .footer-row{ padding:12px 16px 24px; }
+  }
+
+  .sr-only{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); }
+  :focus-visible{ outline:2px solid var(--accent-blue); outline-offset:2px; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:.001ms !important; transition-duration:.001ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <span class="badge-school" id="schoolBadge">TKB CÁ NHÂN</span>
+  </div>
+  <div class="topbar-right">
+    <div class="legend">
+      <div class="legend-item"><span class="dot lt"></span>Lý thuyết (LT)</div>
+      <div class="legend-item"><span class="dot bt"></span>Bài tập (BT)</div>
+      <div class="legend-item"><span class="dot th"></span>Thực hành (TH)</div>
+    </div>
+    <div class="credit-total" id="creditTotal"></div>
+  </div>
+</div>
+
+<div class="header-block">
+  <div class="header-title-row">
+    <div>
+      <h1 id="mainTitle">Thời Khóa Biểu Tuần Chuẩn</h1>
+      <div class="subtitle" id="subTitle">Chưa có dữ liệu — tải lên file TKB hoặc chọn lớp để bắt đầu</div>
+    </div>
+    <div class="class-picker-hint" id="headerActions"></div>
+  </div>
+</div>
+
+<div id="mainContent"></div>
+
+<div class="footer-row">
+  <div class="footer-note" id="footerLeft"></div>
+  <div class="footer-note" id="footerRight"></div>
+</div>
+
+<!-- Import modal -->
+<div class="modal-overlay" id="importModal">
+  <div class="modal">
+    <h3>Tải lên Thời Khóa Biểu</h3>
+    <div class="modal-sub">Hỗ trợ file Excel (.xlsx, .xls, .csv) hoặc PDF. App sẽ tự trích xuất các lớp và môn học.</div>
+    <div class="dropzone" id="dropzone">
+      <div class="dz-icon">📄</div>
+      <div><b>Nhấn để chọn file</b> hoặc kéo thả vào đây</div>
+      <div style="margin-top:4px; color:var(--text-faint); font-size:11.5px;">.xlsx, .xls, .csv, .pdf</div>
+    </div>
+    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv,.pdf" style="display:none">
+    <div id="importStatus" style="margin-top:14px; font-size:13px; color:var(--text-dim); display:none;"></div>
+    <div class="modal-close-row">
+      <button class="btn btn-ghost" id="closeImportModal">Đóng</button>
+    </div>
+  </div>
+</div>
+
+<!-- Class picker modal -->
+<div class="modal-overlay" id="classPickerModal">
+  <div class="modal">
+    <h3>Chọn lớp học của bạn</h3>
+    <div class="modal-sub">App tìm thấy các mã lớp sau trong file. Gõ để tìm nhanh, chọn lớp để tự động dựng TKB.</div>
+    <div class="field" style="margin-bottom:10px;">
+      <input type="text" id="classSearchInput" placeholder="Tìm theo mã lớp, ví dụ: K70I-IT1">
+    </div>
+    <div class="class-list" id="classList"></div>
+    <div class="modal-close-row">
+      <button class="btn btn-ghost" id="closeClassPickerModal">Đóng</button>
+      <button class="btn btn-primary" id="gotoCustomBuild">Tự chọn môn thay vào đó</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Custom build modal -->
+<div class="modal-overlay" id="customBuildModal">
+  <div class="modal">
+    <h3>Tự chọn môn học</h3>
+    <div class="modal-sub">Tick chọn các lớp học phần bạn muốn ghép vào TKB của mình. Trùng lịch sẽ được cảnh báo.</div>
+    <div class="field" style="margin-bottom:10px;">
+      <input type="text" id="subjectSearchInput" placeholder="Tìm theo tên môn hoặc mã lớp">
+    </div>
+    <div class="subject-checklist" id="subjectChecklist"></div>
+    <div class="modal-close-row">
+      <button class="btn btn-ghost" id="closeCustomBuildModal">Hủy</button>
+      <button class="btn btn-primary" id="applyCustomBuild">Áp dụng</button>
+    </div>
+  </div>
+</div>
+
+<!-- Subject detail modal -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal" id="detailModalBody"></div>
+</div>
+
+<!-- Add/edit subject modal -->
+<div class="modal-overlay" id="addSubjectModal">
+  <div class="modal" id="addSubjectModalBody" style="max-width:560px;"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+window.__pdfjsLib = null;
+try{
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  window.__pdfjsLib = pdfjsLib;
+}catch(e){ console.warn('pdf.js not available', e); }
+</script>
+<script>
+// ============================================================
+// TKB App - Thời Khóa Biểu cá nhân với import Excel/PDF
+// Chạy hoàn toàn cục bộ (localStorage), không cần đăng nhập.
+// ============================================================
+
+const DAYS = ['Thứ Hai','Thứ Ba','Thứ Tư','Thứ Năm','Thứ Sáu','Thứ Bảy','Chủ Nhật'];
+const DAY_ABBR = ['T2','T3','T4','T5','T6','T7','CN'];
+const CA_DEFS = [
+  { id:1, name:'Ca 1', tiet:'Tiết 1 – 3', time:'07:00 – 09:40' },
+  { id:2, name:'Ca 2', tiet:'Tiết 4 – 6', time:'09:50 – 12:30' },
+  { id:3, name:'Ca 3', tiet:'Tiết 7 – 9', time:'13:30 – 16:10' },
+  { id:4, name:'Ca 4', tiet:'Tiết 10 – 12', time:'16:20 – 19:00' },
+];
+const TYPE_MAP = {
+  lt: { label:'LÝ THUYẾT', cls:'lt' },
+  bt: { label:'BÀI TẬP', cls:'bt' },
+  th: { label:'THỰC HÀNH', cls:'th' },
+  onl: { label:'ONLINE', cls:'onl' },
+};
+const LOCAL_KEY = 'tkb_app_state_v1';
+
+// ---------- App State ----------
+// rawSubjects: full parsed catalog from uploaded file (all classes)
+// mySchedule: subjects the current user has selected for their personal TKB
+// selectedClassCode: if user picked a class wholesale, its code (for re-deriving / display)
+let STATE = {
+  rawSubjects: [],       // [{id, className, subjectCode, subjectName, type:{cls,label}, day(1-7|null), ca(1-4|null), room, teacher, note, warn, groupId}]
+  mySchedule: [],         // subset of rawSubjects (by id) chosen for personal view
+  selectedClassCode: null,
+  creditsByClass: {},     // className -> credit total (from "Tổng TC" rows)
+  totalCredits: null,
+  sourceFileName: null,
+  lastImportAt: null,
+};
+
+// ---------- Utils ----------
+function uid(prefix){
+  if (window.crypto && crypto.randomUUID) return prefix + '_' + crypto.randomUUID();
+  return prefix + '_' + Date.now() + '_' + Math.random().toString(36).slice(2,9);
+}
+
+function showToast(msg, kind){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (kind ? ' ' + kind : '');
+  clearTimeout(showToast._timer);
+  showToast._timer = setTimeout(()=>{ t.classList.remove('show'); }, 3200);
+}
+
+function openModal(id){ document.getElementById(id).classList.add('show'); }
+function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+
+function normalizeDayToken(s){
+  if (s === null || s === undefined) return null;
+  s = String(s).trim().toLowerCase();
+  // numeric 2-8 (Google Sheets convention: 2=Mon..7=Sat, 8=Sun) or 2-7 range
+  const numMap = { '2':1, '3':2, '4':3, '5':4, '6':5, '7':6, '8':7 };
+  if (numMap[s]) return numMap[s];
+  if (/^(thứ ?2|t2|mon|monday)/.test(s)) return 1;
+  if (/^(thứ ?3|t3|tue|tuesday)/.test(s)) return 2;
+  if (/^(thứ ?4|t4|wed|wednesday)/.test(s)) return 3;
+  if (/^(thứ ?5|t5|thu|thursday)/.test(s)) return 4;
+  if (/^(thứ ?6|t6|fri|friday)/.test(s)) return 5;
+  if (/^(thứ ?7|t7|sat|saturday)/.test(s)) return 6;
+  if (/^(chủ ?nhật|cn|sun|sunday)/.test(s)) return 7;
+  return null;
+}
+
+function normalizeTypeToken(s){
+  if (!s) return { cls:'lt', label:'LÝ THUYẾT' };
+  const raw = String(s).trim().toUpperCase();
+  // Composite types like "LT+BT" or "LT+TH" -> show combined label, use first part's color
+  if (raw.includes('+')){
+    const parts = raw.split('+').map(p=>p.trim());
+    const labelMap = { LT:'LT', BT:'BT', TH:'TH' };
+    const label = parts.map(p=>labelMap[p]||p).join('+');
+    const clsKey = parts[0].toLowerCase();
+    const cls = ['lt','bt','th'].includes(clsKey) ? clsKey : 'lt';
+    return { cls, label };
+  }
+  if (/^ONL/.test(raw)) return { cls:'onl', label:'ONLINE' };
+  if (/^(LT|LÝ ?THUYẾT|THEORY)/i.test(raw)) return { cls:'lt', label:'LÝ THUYẾT' };
+  if (/^(BT|BÀI ?TẬP|EXERCISE)/i.test(raw)) return { cls:'bt', label:'BÀI TẬP' };
+  if (/^(TH|THỰC ?HÀNH|PRACTICE|LAB)/i.test(raw)) return { cls:'th', label:'THỰC HÀNH' };
+  return { cls:'lt', label: raw || 'LÝ THUYẾT' };
+}
+
+// Returns an array of ca numbers a session occupies — e.g. "3 - 4" -> [3,4], "2" -> [2].
+function normalizeCaToken(s, tietStr){
+  if (s !== null && s !== undefined && String(s).trim() !== ''){
+    const str = String(s).trim();
+    const rangeM = str.match(/(\d)\s*-\s*(\d)/);
+    if (rangeM){
+      const a = +rangeM[1], b = +rangeM[2];
+      const lo = Math.min(a,b), hi = Math.max(a,b);
+      const out = [];
+      for (let i=lo; i<=hi && i<=4; i++) out.push(i);
+      if (out.length) return out;
+    }
+    const m = str.match(/(\d)/);
+    if (m && +m[1] >= 1 && +m[1] <= 4) return [+m[1]];
+  }
+  if (tietStr){
+    const m = String(tietStr).match(/(\d+)/);
+    if (m){
+      const t = +m[1];
+      if (t <= 3) return [1];
+      if (t <= 6) return [2];
+      if (t <= 9) return [3];
+      return [4];
+    }
+  }
+  return null;
+}
+
+function escapeHtml(s){
+  if (s === null || s === undefined) return '';
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ---------- Local persistence ----------
+function saveLocal(){
+  try{
+    localStorage.setItem(LOCAL_KEY, JSON.stringify(STATE));
+  }catch(e){ console.warn('localStorage save failed', e); }
+}
+function loadLocal(){
+  try{
+    const raw = localStorage.getItem(LOCAL_KEY);
+    if (raw){
+      const parsed = JSON.parse(raw);
+      STATE = Object.assign(STATE, parsed);
+    }
+  }catch(e){ console.warn('localStorage load failed', e); }
+}
+
+function scheduleSave(){
+  saveLocal();
+}
+
+// ============================================================
+// File parsing: Excel/CSV + PDF -> rawSubjects[]
+// ============================================================
+
+// Expected loose column headers (Vietnamese, case-insensitive, flexible order):
+// Mã lớp / Lớp | Môn học / Tên môn | Loại (LT/BT/TH) | Thứ | Ca / Tiết | Phòng | Giảng viên | Ghi chú | Tín chỉ
+
+// Mã lớp / Lớp | Môn học / Tên môn | Loại (LT/BT/TH/ONL, hỗ trợ ghép "LT+BT") | Thứ | Ca (hỗ trợ "1 - 2") | Phòng | Giảng viên | Ghi chú | Tín chỉ
+
+const COLUMN_ALIASES = {
+  className:  ['mã lớp', 'lớp', 'class', 'ma lop', 'lop'],
+  subjectName:['môn học', 'tên môn', 'môn', 'subject', 'ten mon', 'mon hoc'],
+  type:       ['lt/bt/th', 'loại', 'type', 'hình thức', 'loai'],
+  day:        ['thứ', 'ngày', 'day', 'thu'],
+  ca:         ['ca', 'tiết', 'shift', 'tiet'],
+  room:       ['giảng đường', 'phòng', 'room', 'phong', 'giang duong'],
+  teacher:    ['giảng viên', 'gv', 'teacher', 'giang vien'],
+  note:       ['ghi chú', 'note', 'ghi chu'],
+  credit:     ['tc', 'tín chỉ', 'credit', 'so tin chi', 'tin chi'],
+  subjectCode:['mã hp', 'ma hp', 'mã lhp', 'ma lhp'],
+};
+
+function extractWarnFromNote(note){
+  if (!note) return '';
+  // Detect patterns like "Học từ 16/11", "bắt đầu học từ tuần 11 (16/11)", "nghỉ", "đổi phòng"...
+  const m = note.match(/học\s*từ\s*(\d{1,2}\/\d{1,2})/i);
+  if (m) return `HỌC TỪ ${m[1]}`;
+  if (/nghỉ/i.test(note)) return 'NGHỈ';
+  if (/đổi phòng|chuyển phòng/i.test(note)) return 'ĐỔI PHÒNG';
+  return '';
+}
+
+function findColIndex(headerRow, aliases){
+  // Prefer an exact (trimmed) header match before falling back to substring
+  // matching — otherwise a short alias like "tc" can accidentally match inside
+  // an unrelated longer header.
+  const normalized = headerRow.map(h => String(h||'').trim().toLowerCase());
+  for (const a of aliases){
+    const exact = normalized.indexOf(a);
+    if (exact !== -1) return exact;
+  }
+  for (let i=0;i<normalized.length;i++){
+    const h = normalized[i];
+    if (!h) continue;
+    for (const a of aliases){
+      if (h.includes(a)) return i;
+    }
+  }
+  return -1;
+}
+
+function isTotalRow(row, colIdx){
+  // Rows like ['K70I-IT1', null, 'Tổng TC', 18, ...] summarize a class block
+  // and are not an actual scheduled session — skip them.
+  const name = colIdx.subjectName>=0 ? String(row[colIdx.subjectName]||'').trim().toLowerCase() : '';
+  return /^tổng/i.test(name) || /^tong/i.test(name);
+}
+
+function parseSheetRows(rows){
+  // rows: array of arrays (first row = header)
+  if (!rows || rows.length < 2) return { subjects: [], creditsByClass: {} };
+  const header = rows[0];
+  const colIdx = {};
+  for (const key in COLUMN_ALIASES){
+    colIdx[key] = findColIndex(header, COLUMN_ALIASES[key]);
+  }
+  if (colIdx.subjectName === -1){
+    throw new Error('Không tìm thấy cột "Môn học" trong file. Vui lòng kiểm tra định dạng.');
+  }
+
+  const out = [];
+  const creditsByClass = {}; // className -> credit total, taken from "Tổng TC" rows when present
+  let lastClassName = '';
+
+  for (let r=1; r<rows.length; r++){
+    const row = rows[r];
+    if (!row || row.every(c => c===undefined || c===null || String(c).trim()==='')) continue;
+
+    const classNameRaw = colIdx.className>=0 ? String(row[colIdx.className]||'').trim() : '';
+    if (classNameRaw) lastClassName = classNameRaw;
+    const className = classNameRaw || lastClassName; // merged-cell style files often blank-repeat the class
+
+    if (isTotalRow(row, colIdx)){
+      const totalVal = colIdx.credit>=0 ? parseFloat(row[colIdx.credit]) : NaN;
+      if (!isNaN(totalVal) && className) creditsByClass[className] = totalVal;
+      continue;
+    }
+
+    const subjectName = colIdx.subjectName>=0 ? String(row[colIdx.subjectName]||'').trim() : '';
+    if (!subjectName) continue;
+
+    const typeRaw = colIdx.type>=0 ? row[colIdx.type] : null;
+    const type = normalizeTypeToken(typeRaw);
+    const noteRaw = colIdx.note>=0 ? String(row[colIdx.note]||'').trim() : '';
+    const warn = extractWarnFromNote(noteRaw);
+    const room = colIdx.room>=0 ? String(row[colIdx.room]||'').trim() : '';
+    const teacher = colIdx.teacher>=0 ? String(row[colIdx.teacher]||'').trim() : '';
+    const subjectCode = colIdx.subjectCode>=0 ? String(row[colIdx.subjectCode]||'').trim() : '';
+
+    const day = normalizeDayToken(colIdx.day>=0 ? row[colIdx.day] : null);
+    const cas = normalizeCaToken(colIdx.ca>=0 ? row[colIdx.ca] : null, null);
+
+    // Online / no fixed slot sessions (e.g. "ONL") have no day+ca — keep them
+    // as a slot-less entry rather than silently dropping them, so the person
+    // can still see they're enrolled in it.
+    if (!day || !cas){
+      out.push({
+        id: uid('sub'), className, subjectCode, subjectName, type, day:null, ca:null,
+        room, teacher, note: noteRaw, warn,
+      });
+      continue;
+    }
+
+    // A session spanning multiple consecutive ca (e.g. "3 - 4") is the same
+    // class occupying more than one slot — represented as one card per slot
+    // it touches, sharing a groupId so the UI can treat them as one session.
+    const groupId = uid('grp');
+    cas.forEach(ca=>{
+      out.push({
+        id: uid('sub'), groupId, className, subjectCode, subjectName, type, day, ca,
+        room, teacher, note: noteRaw, warn,
+      });
+    });
+  }
+  return { subjects: out, creditsByClass };
+}
+
+function parseExcelFile(file){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = (e)=>{
+      try{
+        const data = new Uint8Array(e.target.result);
+        const wb = XLSX.read(data, { type:'array' });
+        let all = [];
+        let creditsByClass = {};
+        wb.SheetNames.forEach(name=>{
+          const ws = wb.Sheets[name];
+          const rows = XLSX.utils.sheet_to_json(ws, { header:1, raw:false, defval:'' });
+          try{
+            const parsed = parseSheetRows(rows);
+            all = all.concat(parsed.subjects);
+            Object.assign(creditsByClass, parsed.creditsByClass);
+          }catch(err){ /* sheet doesn't match expected shape, skip it */ }
+        });
+        if (all.length === 0) throw new Error('Không trích xuất được dữ liệu môn học nào. Kiểm tra lại các cột: Mã lớp, Môn học, Thứ, Ca, Phòng, Giảng viên.');
+        resolve({ subjects: all, creditsByClass });
+      }catch(err){ reject(err); }
+    };
+    reader.onerror = ()=> reject(new Error('Không đọc được file.'));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function parseCsvFile(file){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = (e)=>{
+      try{
+        const wb = XLSX.read(e.target.result, { type:'string' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, { header:1, raw:false, defval:'' });
+        const { subjects, creditsByClass } = parseSheetRows(rows);
+        if (subjects.length === 0) throw new Error('Không trích xuất được dữ liệu môn học nào từ CSV.');
+        resolve({ subjects, creditsByClass });
+      }catch(err){ reject(err); }
+    };
+    reader.onerror = ()=> reject(new Error('Không đọc được file CSV.'));
+    reader.readAsText(file, 'utf-8');
+  });
+}
+
+// PDF: extract text, then attempt heuristic line-based parsing.
+// PDF tables vary wildly, so this is best-effort — user can retry with Excel for reliability.
+async function parsePdfFile(file){
+  if (!window.__pdfjsLib) throw new Error('Trình đọc PDF chưa sẵn sàng, thử tải lại trang.');
+  const buf = await file.arrayBuffer();
+  const pdf = await window.__pdfjsLib.getDocument({ data: buf }).promise;
+  let lines = [];
+  for (let p=1; p<=pdf.numPages; p++){
+    const page = await pdf.getPage(p);
+    const content = await page.getTextContent();
+    // group text items by approximate y-position into lines
+    const byY = {};
+    content.items.forEach(item=>{
+      const y = Math.round(item.transform[5]);
+      if (!byY[y]) byY[y] = [];
+      byY[y].push(item.str);
+    });
+    const ys = Object.keys(byY).map(Number).sort((a,b)=>b-a);
+    ys.forEach(y=>{ lines.push(byY[y].join(' ').trim()); });
+  }
+  lines = lines.filter(l=>l.length>0);
+  const subjects = parsePdfLines(lines);
+  if (subjects.length === 0){
+    throw new Error('Không tự động trích xuất được bảng từ PDF này. Vui lòng thử file Excel/CSV để có kết quả chính xác hơn.');
+  }
+  return { subjects, creditsByClass: {} };
+}
+
+function parsePdfLines(lines){
+  // Heuristic: look for lines containing a day token + a Ca/tiết token + room-like token.
+  // This is intentionally forgiving since PDF table extraction is unreliable in general.
+  const dayRegex = /(thứ\s*[2-7]|chủ\s*nhật|CN\b)/i;
+  const roomRegex = /P\.\s?[\w\-]+/i;
+  const out = [];
+  let currentClass = '';
+
+  lines.forEach(line=>{
+    const classMatch = line.match(/^(Lớp|Mã lớp)[:\s]+(.+)$/i);
+    if (classMatch){ currentClass = classMatch[2].trim(); return; }
+
+    const dayM = line.match(dayRegex);
+    if (!dayM) return;
+    const day = normalizeDayToken(dayM[0]);
+    if (!day) return;
+
+    const roomM = line.match(roomRegex);
+    const typeM = line.match(/\b(LT|BT|TH|Lý thuyết|Bài tập|Thực hành)\b/i);
+    const caM = line.match(/Ca\s*([1-4])/i) || line.match(/Tiết\s*(\d+)/i);
+    const warnM = line.match(/học\s*từ\s*(\d{1,2}\/\d{1,2})/i);
+
+    // subject name: strip out the matched tokens, keep the remainder as best-effort name
+    let name = line
+      .replace(dayRegex,'')
+      .replace(roomRegex,'')
+      .replace(/\b(LT|BT|TH|Lý thuyết|Bài tập|Thực hành)\b/i,'')
+      .replace(/Ca\s*[1-4]/i,'')
+      .replace(/Tiết\s*\d+/i,'')
+      .replace(/học\s*từ\s*\d{1,2}\/\d{1,2}/i,'')
+      .replace(/\s{2,}/g,' ')
+      .trim();
+    if (!name || name.length < 2) return;
+
+    const cas = normalizeCaToken(caM ? caM[1] : null, null) || [1];
+    const groupId = uid('grp');
+    cas.forEach(ca=>{
+      out.push({
+        id: uid('sub'),
+        groupId,
+        className: currentClass,
+        subjectCode: '',
+        subjectName: name,
+        type: normalizeTypeToken(typeM ? typeM[0] : null),
+        day,
+        ca,
+        room: roomM ? roomM[0] : '',
+        teacher: '',
+        note: '',
+        warn: warnM ? `HỌC TỪ ${warnM[1]}` : '',
+      });
+    });
+  });
+  return out;
+}
+
+async function handleFileImport(file){
+  const statusEl = document.getElementById('importStatus');
+  statusEl.style.display = 'block';
+  statusEl.innerHTML = '<span class="spinner"></span> Đang xử lý file...';
+  try{
+    const ext = file.name.split('.').pop().toLowerCase();
+    let result;
+    if (ext === 'xlsx' || ext === 'xls'){
+      result = await parseExcelFile(file);
+    } else if (ext === 'csv'){
+      result = await parseCsvFile(file);
+    } else if (ext === 'pdf'){
+      result = await parsePdfFile(file);
+    } else {
+      throw new Error('Định dạng file không được hỗ trợ.');
+    }
+    const { subjects, creditsByClass } = result;
+    STATE.rawSubjects = subjects;
+    STATE.creditsByClass = creditsByClass || {};
+    STATE.sourceFileName = file.name;
+    STATE.lastImportAt = Date.now();
+    STATE.totalCredits = null;
+    // Reset any previously-built personal schedule tied to the old file
+    STATE.mySchedule = [];
+    STATE.selectedClassCode = null;
+    scheduleSave();
+    statusEl.innerHTML = `✅ Đã trích xuất ${subjects.length} mục từ file.`;
+    showToast(`Đã tải lên: ${subjects.length} mục lịch học`, 'success');
+    setTimeout(()=>{
+      closeModal('importModal');
+      openClassPicker();
+    }, 700);
+  }catch(err){
+    console.warn('Import failed', err);
+    statusEl.innerHTML = `⚠️ ${escapeHtml(err.message || 'Có lỗi khi xử lý file.')}`;
+  }
+}
+
+// ============================================================
+// Class picker & custom build
+// ============================================================
+
+function getClassGroups(){
+  const groups = {};
+  STATE.rawSubjects.forEach(s=>{
+    const key = s.className || '(không rõ lớp)';
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(s);
+  });
+  return groups;
+}
+
+function renderClassList(filterText){
+  const groups = getClassGroups();
+  let keys = Object.keys(groups).filter(k=>k !== '(không rõ lớp)');
+  if (filterText){
+    const f = filterText.trim().toLowerCase();
+    keys = keys.filter(k=>k.toLowerCase().includes(f));
+  }
+  const listEl = document.getElementById('classList');
+  if (keys.length === 0){
+    listEl.innerHTML = `<div style="color:var(--text-dim); font-size:13px; padding:12px 0;">Không tìm thấy lớp phù hợp.</div>`;
+    return;
+  }
+  listEl.innerHTML = keys.sort().map(k=>`
+    <div class="class-option" data-class="${escapeHtml(k)}">
+      <span>${escapeHtml(k)}</span>
+      <span class="cnt">${groups[k].length} mục</span>
+    </div>
+  `).join('');
+  listEl.querySelectorAll('.class-option').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      selectWholeClass(el.dataset.class);
+    });
+  });
+}
+
+function openClassPicker(){
+  const groups = getClassGroups();
+  const keys = Object.keys(groups).filter(k=>k !== '(không rõ lớp)');
+  const searchEl = document.getElementById('classSearchInput');
+  if (searchEl) searchEl.value = '';
+  if (keys.length === 0){
+    document.getElementById('classList').innerHTML = `<div style="color:var(--text-dim); font-size:13px; padding:12px 0;">Không phát hiện mã lớp riêng biệt trong file. Hãy dùng "Tự chọn môn" bên dưới.</div>`;
+  } else {
+    renderClassList('');
+  }
+  openModal('classPickerModal');
+}
+
+function selectWholeClass(classCode){
+  STATE.mySchedule = STATE.rawSubjects.filter(s=>s.className === classCode);
+  STATE.selectedClassCode = classCode;
+  STATE.totalCredits = (STATE.creditsByClass && STATE.creditsByClass[classCode]) || null;
+  scheduleSave();
+  closeModal('classPickerModal');
+  showToast(`Đã áp dụng TKB lớp ${classCode}`, 'success');
+  render();
+}
+
+function timeslotKey(s){ return s.day + '_' + s.ca; }
+
+function openCustomBuild(){
+  closeModal('classPickerModal');
+  const searchEl = document.getElementById('subjectSearchInput');
+  if (searchEl) searchEl.value = '';
+  const selectedGroupKeys = new Set(STATE.mySchedule.map(s=>s.groupId || s.id));
+  const listEl = document.getElementById('subjectChecklist');
+  // group rows by groupId (or id, for single-slot rows) so a multi-ca session
+  // (e.g. "Ca 3 - 4") appears and gets toggled as ONE checklist item, not two.
+  const byGroup = {};
+  STATE.rawSubjects.forEach(s=>{
+    const key = s.groupId || s.id;
+    if (!byGroup[key]) byGroup[key] = [];
+    byGroup[key].push(s);
+  });
+  const groupedList = Object.values(byGroup).sort((a,b)=> a[0].subjectName.localeCompare(b[0].subjectName,'vi'));
+
+  listEl.innerHTML = groupedList.map(items=>{
+    const s = items[0];
+    const key = s.groupId || s.id;
+    const caLabel = items
+      .map(i=>i.ca)
+      .filter(c=>c!==null)
+      .sort((a,b)=>a-b)
+      .map(c=>{ const ca = CA_DEFS.find(x=>x.id===c); return ca?ca.name:''; })
+      .join(' - ');
+    const dayLabel = s.day ? DAY_ABBR[s.day-1] : 'Online / chưa xếp lịch';
+    const idsAttr = items.map(i=>i.id).join(',');
+    return `
+      <label class="subject-check-item">
+        <input type="checkbox" data-group="${escapeHtml(key)}" data-ids="${escapeHtml(idsAttr)}" ${selectedGroupKeys.has(key)?'checked':''}>
+        <div>
+          <div class="sci-main">${escapeHtml(s.subjectName)} <span style="color:var(--text-faint); font-weight:500;">${s.className?('· '+escapeHtml(s.className)):''}</span></div>
+          <div class="sci-meta">${escapeHtml(dayLabel)}${caLabel?(' · '+caLabel):''} · ${escapeHtml(s.room||'')} ${s.teacher?('· '+escapeHtml(s.teacher)):''}</div>
+        </div>
+      </label>
+    `;
+  }).join('');
+  openModal('customBuildModal');
+}
+
+function filterSubjectChecklist(filterText){
+  const f = filterText.trim().toLowerCase();
+  document.querySelectorAll('#subjectChecklist .subject-check-item').forEach(item=>{
+    const text = item.textContent.toLowerCase();
+    item.style.display = (!f || text.includes(f)) ? '' : 'none';
+  });
+}
+
+function applyCustomBuild(){
+  const checkedIds = new Set();
+  document.querySelectorAll('#subjectChecklist input:checked').forEach(el=>{
+    (el.dataset.ids || '').split(',').filter(Boolean).forEach(id=>checkedIds.add(id));
+  });
+  const chosen = STATE.rawSubjects.filter(s=>checkedIds.has(s.id));
+
+  // conflict detection: same day+ca chosen twice (skip slot-less/online entries)
+  const seen = {};
+  const conflicts = [];
+  chosen.forEach(s=>{
+    if (!s.day || !s.ca) return;
+    const key = timeslotKey(s);
+    if (seen[key]) conflicts.push([seen[key], s]);
+    else seen[key] = s;
+  });
+
+  STATE.mySchedule = chosen;
+  STATE.selectedClassCode = null;
+  STATE.totalCredits = null;
+  scheduleSave();
+  closeModal('customBuildModal');
+  if (conflicts.length){
+    showToast(`Đã áp dụng, nhưng có ${conflicts.length} cặp môn trùng lịch — kiểm tra lưới bên dưới.`, 'error');
+  } else {
+    showToast(`Đã áp dụng TKB với ${chosen.length} môn.`, 'success');
+  }
+  render();
+}
+
+// ============================================================
+// Rendering
+// ============================================================
+
+function render(){
+  renderHeader();
+  renderFooter();
+  const content = document.getElementById('mainContent');
+
+  if (STATE.mySchedule.length === 0){
+    content.innerHTML = `
+      <div class="empty-state">
+        <h2>Chưa có Thời Khóa Biểu</h2>
+        <p>Tải lên file TKB tổng (Excel hoặc PDF) của trường, sau đó chọn lớp của bạn — hoặc tự ghép các môn học phần lẻ để dựng TKB riêng.</p>
+        <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+          <button class="btn btn-primary" id="emptyImportBtn">Tải lên file TKB</button>
+          ${STATE.rawSubjects.length ? '<button class="btn" id="emptyPickBtn">Chọn lớp / môn</button>' : ''}
+          <button class="btn" id="emptyAddBtn">Tự thêm môn học</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('emptyImportBtn').addEventListener('click', ()=>openModal('importModal'));
+    const pickBtn = document.getElementById('emptyPickBtn');
+    if (pickBtn) pickBtn.addEventListener('click', openClassPicker);
+    document.getElementById('emptyAddBtn').addEventListener('click', ()=> openAddSubjectModal({}));
+    return;
+  }
+
+  content.innerHTML = renderGrid();
+  wireCardClicks();
+}
+
+function renderHeader(){
+  const title = document.getElementById('mainTitle');
+  const sub = document.getElementById('subTitle');
+  const actions = document.getElementById('headerActions');
+
+  if (STATE.selectedClassCode){
+    title.textContent = `Thời Khóa Biểu — Lớp ${STATE.selectedClassCode}`;
+  } else if (STATE.mySchedule.length){
+    title.textContent = 'Thời Khóa Biểu Cá Nhân';
+  } else {
+    title.textContent = 'Thời Khóa Biểu';
+  }
+
+  if (STATE.sourceFileName){
+    sub.textContent = `Nguồn: ${STATE.sourceFileName} · ${STATE.mySchedule.length} môn đang hiển thị`;
+  } else {
+    sub.textContent = 'Chưa có dữ liệu — tải lên file TKB hoặc chọn lớp để bắt đầu';
+  }
+
+  actions.innerHTML = `
+    <button class="btn btn-sm" id="hdrImportBtn">📤 Tải file mới</button>
+    ${STATE.rawSubjects.length ? '<button class="btn btn-sm" id="hdrPickBtn">🔀 Đổi lớp / môn</button>' : ''}
+    <button class="btn btn-sm btn-primary" id="addSubjectBtn">➕ Thêm môn</button>
+    <button class="btn btn-sm" id="exportImageBtn">🖼️ Lưu ảnh</button>
+  `;
+  document.getElementById('hdrImportBtn').addEventListener('click', ()=>openModal('importModal'));
+  const pickBtn = document.getElementById('hdrPickBtn');
+  if (pickBtn) pickBtn.addEventListener('click', openClassPicker);
+  document.getElementById('addSubjectBtn').addEventListener('click', ()=> openAddSubjectModal({}));
+  document.getElementById('exportImageBtn').addEventListener('click', exportScheduleAsImage);
+
+  document.getElementById('creditTotal').innerHTML = STATE.totalCredits
+    ? `Tổng: <b>${STATE.totalCredits}</b> Tín chỉ` : '';
+}
+
+function renderFooter(){
+  document.getElementById('footerLeft').textContent = STATE.sourceFileName
+    ? `TKB cá nhân · nguồn dữ liệu: ${STATE.sourceFileName}`
+    : 'TKB cá nhân';
+  const warnItems = STATE.mySchedule.filter(s=>s.warn);
+  document.getElementById('footerRight').innerHTML = warnItems.length
+    ? `📌 ${warnItems.length} môn có ghi chú đặc biệt`
+    : '';
+}
+
+function renderGrid(){
+  const byCell = {};
+  STATE.mySchedule.forEach(s=>{
+    const key = s.day + '_' + s.ca;
+    if (!byCell[key]) byCell[key] = [];
+    byCell[key].push(s);
+  });
+
+  let head = `<div class="grid-head corner">Thời Gian / Tiết</div>`;
+  for (let d=1; d<=6; d++){
+    head += `<div class="grid-head">${DAYS[d-1]}</div>`;
+  }
+
+  let rows = '';
+  CA_DEFS.forEach(ca=>{
+    rows += `
+      <div class="ca-label">
+        <div class="ca-name">${ca.name}</div>
+        <div class="ca-tiet">${ca.tiet}</div>
+        <div class="ca-time">${ca.time}</div>
+      </div>
+    `;
+    for (let d=1; d<=6; d++){
+      const items = byCell[d+'_'+ca.id] || [];
+      rows += `<div class="cell">`;
+      if (items.length === 0){
+        rows += `<div class="empty-cell-hint" data-day="${d}" data-ca="${ca.id}">+</div>`;
+      } else {
+        items.forEach(s=>{
+          const t = s.type || TYPE_MAP.lt;
+          rows += `
+            <div class="subject-card type-${t.cls}" data-id="${s.id}">
+              <div class="type-tag-row">
+                <span class="type-tag ${t.cls}">${escapeHtml(t.label)}</span>
+                ${s.warn ? `<span class="warn-tag">⚠️ ${escapeHtml(s.warn)}</span>` : ''}
+              </div>
+              <div class="subject-name">${escapeHtml(s.subjectName)}</div>
+              <div class="subject-meta">
+                ${s.room ? `<div><span class="pin">📍</span><span class="room">${escapeHtml(s.room)}</span></div>` : ''}
+                ${s.teacher ? `<div>GV: ${escapeHtml(s.teacher)}</div>` : ''}
+              </div>
+            </div>
+          `;
+        });
+      }
+      rows += `</div>`;
+    }
+  });
+
+  return `<div class="grid-wrap"><div class="tkb-grid">${head}${rows}</div></div>${renderUnscheduledList()}`;
+}
+
+function renderUnscheduledList(){
+  const unscheduled = STATE.mySchedule.filter(s=> !s.day || !s.ca);
+  if (unscheduled.length === 0) return '';
+  return `
+    <div style="padding:0 24px 24px;">
+      <div style="font-size:13px; font-weight:700; color:var(--text-dim); margin-bottom:10px;">Học online / chưa xếp lịch cố định</div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        ${unscheduled.map(s=>{
+          const t = s.type || TYPE_MAP.lt;
+          return `
+            <div class="subject-card type-${t.cls}" data-id="${s.id}" style="max-width:520px;">
+              <div class="type-tag-row"><span class="type-tag ${t.cls}">${escapeHtml(t.label)}</span></div>
+              <div class="subject-name">${escapeHtml(s.subjectName)}</div>
+              <div class="subject-meta">${s.teacher ? `GV: ${escapeHtml(s.teacher)}` : ''}</div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function wireCardClicks(){
+  document.querySelectorAll('.subject-card').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const s = STATE.mySchedule.find(x=>x.id === el.dataset.id);
+      if (s) openDetailModal(s);
+    });
+  });
+  document.querySelectorAll('.empty-cell-hint').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const day = +el.dataset.day;
+      const ca = +el.dataset.ca;
+      openAddSubjectModal({ day, ca });
+    });
+  });
+}
+
+function openDetailModal(s){
+  const t = s.type || TYPE_MAP.lt;
+  const ca = CA_DEFS.find(c=>c.id===s.ca);
+  const body = document.getElementById('detailModalBody');
+  body.innerHTML = `
+    <div class="type-tag-row">
+      <span class="type-tag ${t.cls}">${escapeHtml(t.label)}</span>
+      ${s.warn ? `<span class="warn-tag">⚠️ ${escapeHtml(s.warn)}</span>` : ''}
+    </div>
+    <h3>${escapeHtml(s.subjectName)}</h3>
+    <div class="modal-sub">${s.day ? DAYS[s.day-1] : 'Chưa xếp lịch cố định'}${ca?(' · '+ca.name+' ('+ca.time+')'):''}</div>
+    <div style="font-size:13px; color:var(--text-dim); line-height:1.9; margin-top:6px;">
+      ${s.className ? `<div>Lớp: <span style="color:var(--text)">${escapeHtml(s.className)}</span></div>` : ''}
+      ${s.subjectCode ? `<div>Mã HP: <span style="color:var(--text)">${escapeHtml(s.subjectCode)}</span></div>` : ''}
+      ${s.room ? `<div>Phòng: <span style="color:var(--text)">${escapeHtml(s.room)}</span></div>` : ''}
+      ${s.teacher ? `<div>Giảng viên: <span style="color:var(--text)">${escapeHtml(s.teacher)}</span></div>` : ''}
+      ${s.note ? `<div>Ghi chú: <span style="color:var(--text)">${escapeHtml(s.note)}</span></div>` : ''}
+    </div>
+    <div class="modal-close-row">
+      <button class="btn btn-danger" id="removeFromSchedule">Gỡ khỏi TKB của tôi</button>
+      <button class="btn" id="editSubjectBtn">✏️ Sửa</button>
+      <button class="btn btn-ghost" id="closeDetailModal">Đóng</button>
+    </div>
+  `;
+  openModal('detailModal');
+  document.getElementById('closeDetailModal').addEventListener('click', ()=>closeModal('detailModal'));
+  document.getElementById('editSubjectBtn').addEventListener('click', ()=>{
+    closeModal('detailModal');
+    openEditSubjectForm(s);
+  });
+  document.getElementById('removeFromSchedule').addEventListener('click', ()=>{
+    // Remove the whole group (all ca slots of a multi-ca session) together.
+    const groupId = s.groupId;
+    STATE.mySchedule = STATE.mySchedule.filter(x=> groupId ? x.groupId !== groupId : x.id !== s.id);
+    // Only custom (manually-added) subjects are removed from the catalog too —
+    // subjects that came from an uploaded file stay in rawSubjects so they're
+    // still selectable later (e.g. via "Đổi lớp / môn").
+    if (s.custom){
+      STATE.rawSubjects = STATE.rawSubjects.filter(x=> groupId ? x.groupId !== groupId : x.id !== s.id);
+    }
+    STATE.selectedClassCode = null; // no longer a pure whole-class view
+    scheduleSave();
+    closeModal('detailModal');
+    render();
+    showToast('Đã gỡ môn khỏi TKB.', null);
+  });
+}
+
+// ============================================================
+// Add / edit a subject directly on the schedule
+// ============================================================
+
+const TYPE_OPTIONS = [
+  { value:'lt', label:'Lý thuyết (LT)' },
+  { value:'bt', label:'Bài tập (BT)' },
+  { value:'th', label:'Thực hành (TH)' },
+  { value:'onl', label:'Online' },
+];
+
+function subjectFormHtml(opts){
+  // opts: { subjectName, typeCls, day, ca, room, teacher, note, className, subjectCode, noSlot }
+  const dayOptionsHtml = DAYS.slice(0,6).map((d,i)=>
+    `<option value="${i+1}" ${opts.day===i+1?'selected':''}>${d}</option>`
+  ).join('');
+  const caOptionsHtml = CA_DEFS.map(c=>
+    `<option value="${c.id}" ${opts.ca===c.id?'selected':''}>${c.name} (${c.tiet})</option>`
+  ).join('');
+  const typeOptionsHtml = TYPE_OPTIONS.map(t=>
+    `<option value="${t.value}" ${opts.typeCls===t.value?'selected':''}>${t.label}</option>`
+  ).join('');
+  return `
+    <div class="field">
+      <label>Tên môn học *</label>
+      <input type="text" id="fSubjectName" value="${escapeHtml(opts.subjectName||'')}" placeholder="VD: Giải tích 1">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Loại</label>
+        <select id="fType">${typeOptionsHtml}</select>
+      </div>
+      <div class="field">
+        <label><input type="checkbox" id="fNoSlot" ${opts.noSlot?'checked':''} style="width:auto; margin-right:6px;">Không có lịch cố định (online)</label>
+      </div>
+    </div>
+    <div class="field-row" id="fSlotRow" style="${opts.noSlot?'display:none;':''}">
+      <div class="field">
+        <label>Thứ</label>
+        <select id="fDay">${dayOptionsHtml}</select>
+      </div>
+      <div class="field">
+        <label>Ca</label>
+        <select id="fCa">${caOptionsHtml}</select>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Phòng</label>
+        <input type="text" id="fRoom" value="${escapeHtml(opts.room||'')}" placeholder="VD: P. 307-B">
+      </div>
+      <div class="field">
+        <label>Lớp / mã HP (tuỳ chọn)</label>
+        <input type="text" id="fClassName" value="${escapeHtml(opts.className||'')}" placeholder="VD: K70I-IT1">
+      </div>
+    </div>
+    <div class="field">
+      <label>Giảng viên</label>
+      <input type="text" id="fTeacher" value="${escapeHtml(opts.teacher||'')}" placeholder="VD: Nguyễn Văn A">
+    </div>
+    <div class="field">
+      <label>Ghi chú (vd: "Học từ 16/11")</label>
+      <input type="text" id="fNote" value="${escapeHtml(opts.note||'')}" placeholder="Không bắt buộc">
+    </div>
+  `;
+}
+
+function readSubjectForm(){
+  const subjectName = document.getElementById('fSubjectName').value.trim();
+  if (!subjectName){
+    showToast('Vui lòng nhập tên môn học.', 'error');
+    return null;
+  }
+  const typeCls = document.getElementById('fType').value;
+  const typeDef = TYPE_OPTIONS.find(t=>t.value===typeCls);
+  const noSlot = document.getElementById('fNoSlot').checked;
+  const room = document.getElementById('fRoom').value.trim();
+  const className = document.getElementById('fClassName').value.trim();
+  const teacher = document.getElementById('fTeacher').value.trim();
+  const note = document.getElementById('fNote').value.trim();
+  const warn = extractWarnFromNote(note);
+  const day = noSlot ? null : +document.getElementById('fDay').value;
+  const ca = noSlot ? null : +document.getElementById('fCa').value;
+  return {
+    subjectName,
+    type: { cls: typeCls, label: typeDef ? typeDef.label.replace(/ \(.+\)/,'').toUpperCase() : typeCls.toUpperCase() },
+    day, ca, room, className, teacher, note, warn,
+  };
+}
+
+function wireSubjectFormToggle(){
+  const noSlotEl = document.getElementById('fNoSlot');
+  const slotRow = document.getElementById('fSlotRow');
+  noSlotEl.addEventListener('change', ()=>{
+    slotRow.style.display = noSlotEl.checked ? 'none' : '';
+  });
+}
+
+// Opens the picker for adding a subject to the personal schedule. If a
+// day/ca was clicked on the grid, pre-fills that slot and — when the
+// uploaded catalog has other subjects free at that exact slot — offers
+// them as one-click picks before falling back to a blank manual form.
+function openAddSubjectModal(prefill){
+  const body = document.getElementById('addSubjectModalBody');
+  const { day, ca } = prefill;
+
+  let candidatesHtml = '';
+  if (day && ca){
+    const takenGroupIds = new Set(STATE.mySchedule.map(s=>s.groupId||s.id));
+    const candidates = STATE.rawSubjects.filter(s=>
+      s.day===day && s.ca===ca && !takenGroupIds.has(s.groupId||s.id)
+    );
+    if (candidates.length){
+      candidatesHtml = `
+        <div style="font-size:12px; font-weight:700; color:var(--text-dim); margin:4px 0 8px;">Có sẵn trong file đã tải lên:</div>
+        <div class="class-list" style="margin-bottom:16px;">
+          ${candidates.map(s=>`
+            <div class="class-option" data-pick-id="${s.id}">
+              <span>${escapeHtml(s.subjectName)} <span style="color:var(--text-faint);">· ${escapeHtml(s.type.label)}${s.className?(' · '+escapeHtml(s.className)):''}</span></span>
+              <span class="cnt">${escapeHtml(s.room||'')}</span>
+            </div>
+          `).join('')}
+        </div>
+        <div style="font-size:12px; font-weight:700; color:var(--text-dim); margin:4px 0 8px;">Hoặc tự nhập môn mới:</div>
+      `;
+    }
+  }
+
+  body.innerHTML = `
+    <h3>Thêm môn học</h3>
+    <div class="modal-sub">${day&&ca ? `${DAYS[day-1]} · ${(CA_DEFS.find(c=>c.id===ca)||{}).name||''}` : 'Chọn thời gian cho môn học của bạn'}</div>
+    ${candidatesHtml}
+    ${subjectFormHtml({ day: day||1, ca: ca||1, noSlot: !day })}
+    <div class="modal-close-row">
+      <button class="btn btn-ghost" id="cancelAddSubject">Hủy</button>
+      <button class="btn btn-primary" id="confirmAddSubject">Thêm vào TKB</button>
+    </div>
+  `;
+  openModal('addSubjectModal');
+  wireSubjectFormToggle();
+
+  body.querySelectorAll('[data-pick-id]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const s = STATE.rawSubjects.find(x=>x.id === el.dataset.pickId);
+      if (!s) return;
+      // add the whole group (covers multi-ca sessions) at once
+      const toAdd = s.groupId ? STATE.rawSubjects.filter(x=>x.groupId===s.groupId) : [s];
+      const existingIds = new Set(STATE.mySchedule.map(x=>x.id));
+      toAdd.forEach(item=>{ if (!existingIds.has(item.id)) STATE.mySchedule.push(item); });
+      STATE.selectedClassCode = null;
+      scheduleSave();
+      closeModal('addSubjectModal');
+      render();
+      showToast(`Đã thêm "${s.subjectName}" vào TKB.`, 'success');
+    });
+  });
+
+  document.getElementById('cancelAddSubject').addEventListener('click', ()=>closeModal('addSubjectModal'));
+  document.getElementById('confirmAddSubject').addEventListener('click', ()=>{
+    const data = readSubjectForm();
+    if (!data) return;
+    // conflict check (only meaningful for slotted subjects)
+    if (data.day && data.ca){
+      const conflict = STATE.mySchedule.find(x=>x.day===data.day && x.ca===data.ca);
+      if (conflict){
+        showToast(`Trùng lịch với "${conflict.subjectName}" — vẫn thêm, nhưng kiểm tra lại lưới.`, 'error');
+      }
+    }
+    const newSub = { id: uid('sub'), subjectCode:'', custom:true, ...data };
+    STATE.mySchedule.push(newSub);
+    STATE.rawSubjects.push(newSub);
+    STATE.selectedClassCode = null;
+    scheduleSave();
+    closeModal('addSubjectModal');
+    render();
+    showToast(`Đã thêm "${data.subjectName}" vào TKB.`, 'success');
+  });
+}
+
+function openEditSubjectForm(s){
+  const body = document.getElementById('addSubjectModalBody');
+  body.innerHTML = `
+    <h3>Sửa môn học</h3>
+    <div class="modal-sub">Chỉnh sửa thông tin, áp dụng chỉ cho TKB của bạn.</div>
+    ${subjectFormHtml({
+      subjectName: s.subjectName, typeCls: (s.type||TYPE_MAP.lt).cls,
+      day: s.day||1, ca: s.ca||1, noSlot: !s.day,
+      room: s.room, className: s.className, teacher: s.teacher, note: s.note,
+    })}
+    <div class="modal-close-row">
+      <button class="btn btn-ghost" id="cancelEditSubject">Hủy</button>
+      <button class="btn btn-primary" id="confirmEditSubject">Lưu thay đổi</button>
+    </div>
+  `;
+  openModal('addSubjectModal');
+  wireSubjectFormToggle();
+
+  document.getElementById('cancelEditSubject').addEventListener('click', ()=>closeModal('addSubjectModal'));
+  document.getElementById('confirmEditSubject').addEventListener('click', ()=>{
+    const data = readSubjectForm();
+    if (!data) return;
+    // Editing detaches this session from any multi-ca group it belonged to
+    // (each slot becomes independently editable) to avoid surprising the
+    // person by silently changing sibling slots they didn't touch.
+    const updated = Object.assign({}, s, data, { groupId: undefined });
+    const applyUpdate = arr => arr.map(x => x.id === s.id ? updated : x);
+    STATE.mySchedule = applyUpdate(STATE.mySchedule);
+    STATE.rawSubjects = applyUpdate(STATE.rawSubjects);
+    scheduleSave();
+    closeModal('addSubjectModal');
+    render();
+    showToast('Đã lưu thay đổi.', 'success');
+  });
+}
+
+// ============================================================
+// Export schedule as a high-resolution image
+// ============================================================
+
+// Renders the schedule into an off-screen container at a fixed desktop
+// width (matching the reference design's proportions) so the exported
+// image always shows the full 6-day grid at high quality — independent
+// of however narrow the visible on-screen layout currently is (e.g. on
+// mobile, where the live page is intentionally condensed).
+function buildExportSnapshotHtml(){
+  const dateStr = new Date().toLocaleDateString('vi-VN');
+  const title = STATE.selectedClassCode
+    ? `Thời Khóa Biểu — Lớp ${STATE.selectedClassCode}`
+    : 'Thời Khóa Biểu Cá Nhân';
+  const creditHtml = STATE.totalCredits ? `Tổng: <b>${STATE.totalCredits}</b> Tín chỉ` : '';
+
+  return `
+    <div style="padding:28px 32px; background:var(--bg);">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
+        <span class="badge-school">TKB CÁ NHÂN</span>
+        <div class="legend" style="display:flex;">
+          <div class="legend-item"><span class="dot lt"></span>Lý thuyết (LT)</div>
+          <div class="legend-item"><span class="dot bt"></span>Bài tập (BT)</div>
+          <div class="legend-item"><span class="dot th"></span>Thực hành (TH)</div>
+          <div class="legend-item"><span class="dot" style="background:#a78bfa;"></span>Online</div>
+          <span class="credit-total">${creditHtml}</span>
+        </div>
+      </div>
+      <h1 style="margin-bottom:4px;">${escapeHtml(title)}</h1>
+      <div class="subtitle" style="margin-bottom:18px;">${STATE.sourceFileName ? `Nguồn: ${escapeHtml(STATE.sourceFileName)}` : ''} · Xuất ngày ${dateStr}</div>
+      ${renderGrid()}
+    </div>
+  `;
+}
+
+async function exportScheduleAsImage(){
+  if (STATE.mySchedule.length === 0){
+    showToast('Chưa có môn học nào trong TKB để xuất ảnh.', 'error');
+    return;
+  }
+  if (typeof html2canvas === 'undefined'){
+    showToast('Không tải được công cụ xuất ảnh, kiểm tra kết nối mạng và thử lại.', 'error');
+    return;
+  }
+  showToast('Đang tạo ảnh chất lượng cao...', null);
+
+  const wrapper = document.createElement('div');
+  wrapper.style.position = 'fixed';
+  wrapper.style.top = '0';
+  wrapper.style.left = '-99999px'; // off-screen, but still laid out/rendered
+  wrapper.style.width = '1600px';  // fixed desktop-like width matching the reference proportions
+  wrapper.style.zIndex = '-1';
+  wrapper.innerHTML = buildExportSnapshotHtml();
+  document.body.appendChild(wrapper);
+  // Hide the "+" add-subject affordance in the exported image — it's a live
+  // UI interaction hint, not something that belongs in a shared schedule image.
+  wrapper.querySelectorAll('.empty-cell-hint').forEach(el=>{ el.style.visibility = 'hidden'; });
+
+  try{
+    // Let the browser lay out/paint the off-screen node before capturing it.
+    await new Promise(r => setTimeout(r, 50));
+    const canvas = await html2canvas(wrapper, {
+      backgroundColor: '#0a0e1a',
+      scale: 2, // ~2x pixel density for a crisp, print-quality export
+      useCORS: true,
+      logging: false,
+      width: 1600,
+      windowWidth: 1600,
+    });
+    const link = document.createElement('a');
+    const fileLabel = (STATE.selectedClassCode || 'ca-nhan').replace(/[^\w\-]+/g,'_');
+    link.download = `TKB_${fileLabel}.png`;
+    link.href = canvas.toDataURL('image/png', 1.0);
+    link.click();
+    showToast('Đã lưu ảnh TKB.', 'success');
+  }catch(err){
+    console.warn('Export image failed', err);
+    showToast('Có lỗi khi tạo ảnh, vui lòng thử lại.', 'error');
+  }finally{
+    document.body.removeChild(wrapper);
+  }
+}
+
+// ============================================================
+// Event wiring & init
+// ============================================================
+
+function wireStaticEvents(){
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+
+  dropzone.addEventListener('click', ()=>fileInput.click());
+  dropzone.addEventListener('dragover', (e)=>{ e.preventDefault(); dropzone.classList.add('dragover'); });
+  dropzone.addEventListener('dragleave', ()=> dropzone.classList.remove('dragover'));
+  dropzone.addEventListener('drop', (e)=>{
+    e.preventDefault();
+    dropzone.classList.remove('dragover');
+    if (e.dataTransfer.files.length) handleFileImport(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', (e)=>{
+    if (e.target.files.length) handleFileImport(e.target.files[0]);
+    fileInput.value = '';
+  });
+
+  document.getElementById('closeImportModal').addEventListener('click', ()=>{
+    closeModal('importModal');
+    document.getElementById('importStatus').style.display = 'none';
+  });
+  document.getElementById('closeClassPickerModal').addEventListener('click', ()=>closeModal('classPickerModal'));
+  document.getElementById('gotoCustomBuild').addEventListener('click', openCustomBuild);
+  document.getElementById('closeCustomBuildModal').addEventListener('click', ()=>closeModal('customBuildModal'));
+  document.getElementById('applyCustomBuild').addEventListener('click', applyCustomBuild);
+
+  document.getElementById('classSearchInput').addEventListener('input', (e)=>{
+    renderClassList(e.target.value);
+  });
+  document.getElementById('subjectSearchInput').addEventListener('input', (e)=>{
+    filterSubjectChecklist(e.target.value);
+  });
+
+  // close modal on overlay click (but not inner click)
+  document.querySelectorAll('.modal-overlay').forEach(ov=>{
+    ov.addEventListener('click', (e)=>{
+      if (e.target === ov) ov.classList.remove('show');
+    });
+  });
+  document.addEventListener('keydown', (e)=>{
+    if (e.key === 'Escape'){
+      document.querySelectorAll('.modal-overlay.show').forEach(ov=>ov.classList.remove('show'));
+    }
+  });
+}
+
+function init(){
+  loadLocal();
+  wireStaticEvents();
+  render();
+}
+
+document.addEventListener('DOMContentLoaded', init);
+
+</script>
+</body>
 </html>

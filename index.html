@@ -1449,7 +1449,7 @@ const TYPE_OPTIONS = [
 ];
 
 function subjectFormHtml(opts){
-  // opts: { subjectName, typeCls, day, ca, room, teacher, note, className, subjectCode, noSlot }
+  // opts: { subjectName, typeCls, day, ca, room, teacher, note, className, subjectCode, noSlot, excludeId }
   const dayOptionsHtml = DAYS.slice(0,6).map((d,i)=>
     `<option value="${i+1}" ${opts.day===i+1?'selected':''}>${d}</option>`
   ).join('');
@@ -1460,19 +1460,6 @@ function subjectFormHtml(opts){
     `<option value="${t.value}" ${opts.typeCls===t.value?'selected':''}>${t.label}</option>`
   ).join('');
   return `
-    <div class="field">
-      <label>Tên môn học *</label>
-      <input type="text" id="fSubjectName" value="${escapeHtml(opts.subjectName||'')}" placeholder="VD: Giải tích 1">
-    </div>
-    <div class="field-row">
-      <div class="field">
-        <label>Loại</label>
-        <select id="fType">${typeOptionsHtml}</select>
-      </div>
-      <div class="field">
-        <label><input type="checkbox" id="fNoSlot" ${opts.noSlot?'checked':''} style="width:auto; margin-right:6px;">Không có lịch cố định (online)</label>
-      </div>
-    </div>
     <div class="field-row" id="fSlotRow" style="${opts.noSlot?'display:none;':''}">
       <div class="field">
         <label>Thứ</label>
@@ -1483,19 +1470,33 @@ function subjectFormHtml(opts){
         <select id="fCa">${caOptionsHtml}</select>
       </div>
     </div>
+    <div class="field">
+      <label><input type="checkbox" id="fNoSlot" ${opts.noSlot?'checked':''} style="width:auto; margin-right:6px;">Không có lịch cố định (online)</label>
+    </div>
+    <div id="fCandidatesWrap"></div>
+    <div class="field">
+      <label>Tên môn học *</label>
+      <input type="text" id="fSubjectName" value="${escapeHtml(opts.subjectName||'')}" placeholder="VD: Giải tích 1">
+    </div>
     <div class="field-row">
+      <div class="field">
+        <label>Loại</label>
+        <select id="fType">${typeOptionsHtml}</select>
+      </div>
       <div class="field">
         <label>Phòng</label>
         <input type="text" id="fRoom" value="${escapeHtml(opts.room||'')}" placeholder="VD: P. 307-B">
       </div>
+    </div>
+    <div class="field-row">
       <div class="field">
         <label>Lớp / mã HP (tuỳ chọn)</label>
         <input type="text" id="fClassName" value="${escapeHtml(opts.className||'')}" placeholder="VD: K70I-IT1">
       </div>
-    </div>
-    <div class="field">
-      <label>Giảng viên</label>
-      <input type="text" id="fTeacher" value="${escapeHtml(opts.teacher||'')}" placeholder="VD: Nguyễn Văn A">
+      <div class="field">
+        <label>Giảng viên</label>
+        <input type="text" id="fTeacher" value="${escapeHtml(opts.teacher||'')}" placeholder="VD: Nguyễn Văn A">
+      </div>
     </div>
     <div class="field">
       <label>Ghi chú (vd: "Học từ 16/11")</label>
@@ -1527,48 +1528,94 @@ function readSubjectForm(){
   };
 }
 
-function wireSubjectFormToggle(){
+// Fills the form fields from a catalog subject — used when the person taps
+// a suggested "available at this slot" candidate, so they land in the same
+// editable form instead of the subject being silently added/replaced.
+function fillSubjectFormFrom(s){
+  document.getElementById('fSubjectName').value = s.subjectName || '';
+  document.getElementById('fType').value = normalizeTypeForDisplay(s.type).cls;
+  document.getElementById('fRoom').value = s.room || '';
+  document.getElementById('fClassName').value = s.className || '';
+  document.getElementById('fTeacher').value = s.teacher || '';
+  document.getElementById('fNote').value = s.note || '';
+}
+
+// Re-renders the "available at this slot" suggestion list to match whatever
+// Thứ/Ca is currently selected in the form — called on open AND every time
+// the person changes Thứ, Ca, or the "no fixed slot" checkbox, so switching
+// Ca always re-filters against the shared/custom catalog for that exact slot.
+// `excludeId` (edit mode) keeps the subject being edited out of its own
+// suggestion list AND out of the candidate pool itself (so a sibling slot
+// of the very session being edited never shows up as "another option to
+// add on top of itself").
+function renderFormCandidates(excludeId){
+  const wrap = document.getElementById('fCandidatesWrap');
+  if (!wrap) return;
+  const noSlot = document.getElementById('fNoSlot').checked;
+  if (noSlot){ wrap.innerHTML = ''; return; }
+  const day = +document.getElementById('fDay').value;
+  const ca = +document.getElementById('fCa').value;
+  const excludeGroupId = excludeId ? (getRawSubjects().find(x=>x.id===excludeId)||{}).groupId : null;
+  const isExcluded = s => s.id===excludeId || (excludeGroupId && s.groupId===excludeGroupId);
+  const takenGroupIds = new Set(
+    STATE.mySchedule
+      .filter(s=> !isExcluded(s))
+      .map(s=>s.groupId||s.id)
+  );
+  const candidates = getRawSubjects().filter(s=>
+    s.day===day && s.ca===ca && !isExcluded(s) && !takenGroupIds.has(s.groupId||s.id)
+  );
+  if (candidates.length === 0){
+    wrap.innerHTML = `<div style="font-size:12px; color:var(--text-faint); margin:2px 0 12px;">Không có môn nào khác trống ở ${DAYS[day-1]} · ${(CA_DEFS.find(c=>c.id===ca)||{}).name||''} trong nguồn TKB.</div>`;
+    return;
+  }
+  wrap.innerHTML = `
+    <div style="font-size:12px; font-weight:700; color:var(--text-dim); margin:2px 0 8px;">Có sẵn trong nguồn TKB ở ${DAYS[day-1]} · ${(CA_DEFS.find(c=>c.id===ca)||{}).name||''}:</div>
+    <div class="class-list" style="margin-bottom:14px;" id="fCandidatesList">
+      ${candidates.map(s=>`
+        <div class="class-option" data-pick-id="${s.id}">
+          <span>${escapeHtml(s.subjectName)} <span style="color:var(--text-faint);">· ${escapeHtml(normalizeTypeForDisplay(s.type).label)}${s.className?(' · '+escapeHtml(s.className)):''}</span></span>
+          <span class="cnt">${escapeHtml(s.room||'')}</span>
+        </div>
+      `).join('')}
+    </div>
+  `;
+  wrap.querySelectorAll('[data-pick-id]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const s = getRawSubjects().find(x=>x.id === el.dataset.pickId);
+      if (s) fillSubjectFormFrom(s);
+    });
+  });
+}
+
+function wireSubjectFormToggle(excludeId){
   const noSlotEl = document.getElementById('fNoSlot');
   const slotRow = document.getElementById('fSlotRow');
-  noSlotEl.addEventListener('change', ()=>{
+  const refresh = ()=>{
     slotRow.style.display = noSlotEl.checked ? 'none' : '';
-  });
+    renderFormCandidates(excludeId);
+  };
+  noSlotEl.addEventListener('change', refresh);
+  document.getElementById('fDay').addEventListener('change', refresh);
+  document.getElementById('fCa').addEventListener('change', refresh);
+  renderFormCandidates(excludeId); // initial render for the pre-filled Thứ/Ca
 }
 
 // Opens the picker for adding a subject to the personal schedule. If a
 // day/ca was clicked on the grid, pre-fills that slot and — when the
-// uploaded catalog has other subjects free at that exact slot — offers
-// them as one-click picks before falling back to a blank manual form.
+// Opens the picker for adding a subject to the personal schedule. If a
+// day/ca was clicked on the grid, pre-fills that slot. The form itself now
+// shows a live "available at this slot" suggestion list (see
+// renderFormCandidates) that re-filters whenever Thứ/Ca changes — so
+// switching Ca inside the form always re-checks the catalog for that ca,
+// not just whatever slot the modal happened to open with.
 function openAddSubjectModal(prefill){
   const body = document.getElementById('addSubjectModalBody');
   const { day, ca } = prefill;
 
-  let candidatesHtml = '';
-  if (day && ca){
-    const takenGroupIds = new Set(STATE.mySchedule.map(s=>s.groupId||s.id));
-    const candidates = getRawSubjects().filter(s=>
-      s.day===day && s.ca===ca && !takenGroupIds.has(s.groupId||s.id)
-    );
-    if (candidates.length){
-      candidatesHtml = `
-        <div style="font-size:12px; font-weight:700; color:var(--text-dim); margin:4px 0 8px;">Có sẵn trong nguồn TKB:</div>
-        <div class="class-list" style="margin-bottom:16px;">
-          ${candidates.map(s=>`
-            <div class="class-option" data-pick-id="${s.id}">
-              <span>${escapeHtml(s.subjectName)} <span style="color:var(--text-faint);">· ${escapeHtml(s.type.label)}${s.className?(' · '+escapeHtml(s.className)):''}</span></span>
-              <span class="cnt">${escapeHtml(s.room||'')}</span>
-            </div>
-          `).join('')}
-        </div>
-        <div style="font-size:12px; font-weight:700; color:var(--text-dim); margin:4px 0 8px;">Hoặc tự nhập môn mới:</div>
-      `;
-    }
-  }
-
   body.innerHTML = `
     <h3>Thêm môn học</h3>
-    <div class="modal-sub">${day&&ca ? `${DAYS[day-1]} · ${(CA_DEFS.find(c=>c.id===ca)||{}).name||''}` : 'Chọn thời gian cho môn học của bạn'}</div>
-    ${candidatesHtml}
+    <div class="modal-sub">Chọn Thứ/Ca trước để xem các môn có sẵn trong nguồn TKB ở khung giờ đó, hoặc tự nhập môn mới.</div>
     ${subjectFormHtml({ day: day||1, ca: ca||1, noSlot: !day })}
     <div class="modal-close-row">
       <button class="btn btn-ghost" id="cancelAddSubject">Hủy</button>
@@ -1576,23 +1623,7 @@ function openAddSubjectModal(prefill){
     </div>
   `;
   openModal('addSubjectModal');
-  wireSubjectFormToggle();
-
-  body.querySelectorAll('[data-pick-id]').forEach(el=>{
-    el.addEventListener('click', ()=>{
-      const s = getRawSubjects().find(x=>x.id === el.dataset.pickId);
-      if (!s) return;
-      // add the whole group (covers multi-ca sessions) at once
-      const toAdd = s.groupId ? getRawSubjects().filter(x=>x.groupId===s.groupId) : [s];
-      const existingIds = new Set(STATE.mySchedule.map(x=>x.id));
-      toAdd.forEach(item=>{ if (!existingIds.has(item.id)) STATE.mySchedule.push(item); });
-      STATE.selectedClassCode = null;
-      scheduleSave();
-      closeModal('addSubjectModal');
-      render();
-      showToast(`Đã thêm "${s.subjectName}" vào TKB.`, 'success');
-    });
-  });
+  wireSubjectFormToggle(null);
 
   document.getElementById('cancelAddSubject').addEventListener('click', ()=>closeModal('addSubjectModal'));
   document.getElementById('confirmAddSubject').addEventListener('click', ()=>{
@@ -1620,7 +1651,7 @@ function openEditSubjectForm(s){
   const body = document.getElementById('addSubjectModalBody');
   body.innerHTML = `
     <h3>Sửa môn học</h3>
-    <div class="modal-sub">Chỉnh sửa thông tin, áp dụng chỉ cho TKB của bạn.</div>
+    <div class="modal-sub">Đổi Thứ/Ca để xem các môn khác có sẵn ở khung giờ đó — hoặc chỉnh trực tiếp thông tin bên dưới. Áp dụng chỉ cho TKB của bạn.</div>
     ${subjectFormHtml({
       subjectName: s.subjectName, typeCls: normalizeTypeForDisplay(s.type).cls,
       day: s.day||1, ca: s.ca||1, noSlot: !s.day,
@@ -1632,7 +1663,7 @@ function openEditSubjectForm(s){
     </div>
   `;
   openModal('addSubjectModal');
-  wireSubjectFormToggle();
+  wireSubjectFormToggle(s.id);
 
   document.getElementById('cancelEditSubject').addEventListener('click', ()=>closeModal('addSubjectModal'));
   document.getElementById('confirmEditSubject').addEventListener('click', ()=>{
